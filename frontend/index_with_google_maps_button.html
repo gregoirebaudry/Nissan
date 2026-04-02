@@ -86,6 +86,7 @@
     </div>
     <button id="parkBtn" onclick="parkCar()">🚗 J’ai garé la voiture</button>
 
+    <button id="gmapsBtn" onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
 
     <div id="status">Le service gratuit peut mettre 20 à 60 secondes à se réveiller. Appuyez une seule fois et patientez.</div>
     <div class="hint">Les boutons se bloquent pendant le chargement pour éviter les doubles clics.</div>
@@ -333,6 +334,17 @@ function showUserModal() {
   });
 }
 
+
+const gmapsBtn = document.getElementById("gmapsBtn");
+
+function openGoogleMaps() {
+  if (busy) return;
+  if (lat === null || lon === null) {
+    alert("Aucune position chargée. Appuyez d’abord sur « Où est le Nissan ? »");
+    return;
+  }
+  window.open(`https://www.google.com/maps?q=${lat},${lon}`, "_blank");
+}
 
 async function parkCar() {
   if (busy) return;
