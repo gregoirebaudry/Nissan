@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-
   <meta charset="UTF-8" />
   <title>Où est le Nissan ?</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -13,6 +12,7 @@
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
   <style>
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #f2f2f7; color: #111; }
     .container { padding: 20px; max-width: 520px; margin: auto; }
@@ -72,9 +72,7 @@
     }
     .modalText { font-size: 16px; line-height: 1.35; }
   </style>
-
 </head>
-
 <body>
 <div class="container">
   <h1>🚗 Où est le Nissan ?</h1>
@@ -85,7 +83,6 @@
       <button id="historyBtn" onclick="toggleHistory()">5 derniers stationnements</button>
     </div>
     <button id="parkBtn" onclick="parkCar()">🚗 J’ai garé la voiture</button>
-
 
     <div id="status">Le service gratuit peut mettre 20 à 60 secondes à se réveiller. Appuyez une seule fois et patientez.</div>
     <div class="hint">Les boutons se bloquent pendant le chargement pour éviter les doubles clics.</div>
@@ -117,11 +114,10 @@
     <button id="userCancel" class="modalBtn cancel">Annuler</button>
   </div>
 </div>
+
 <script>
-
-
-const API = "https://script.google.com/macros/s/AKfycbyVS1LOtTzAnd6P61WZrtauti6_IuNrKalGKwtqjy_BDKUHeWyFHaZ3uKQnch0p6H_WSA/exec";
-const USERS = ["Constance", "Christine", "Marie", "Bastien", "Clement", "Gregoire", "Laurent"];
+const API = "https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec";
+const USERS = ["Constance", "Christine", "Marie", "Clement", "Gregoire", "Laurent", "Bastien"];
 
 const whereBtn = document.getElementById("whereBtn");
 const parkBtn = document.getElementById("parkBtn");
@@ -168,7 +164,6 @@ function setBusy(state, msg) {
   whereBtn.disabled = state;
   parkBtn.disabled = state;
   historyBtn.disabled = state;
-  if (typeof gmapsBtn !== "undefined" && gmapsBtn) gmapsBtn.disabled = state;
   if (msg) statusEl.innerText = msg;
 }
 
@@ -176,7 +171,11 @@ function formatDate(value) {
   if (!value) return "";
   const d = new Date(value);
   if (isNaN(d.getTime())) return value;
-  return d.toLocaleString("fr-FR");
+  return d.toLocaleString("fr-FR", {
+    timeZone: "Europe/Paris",
+    dateStyle: "medium",
+    timeStyle: "short"
+  });
 }
 
 function clearHistoryMarkers() {
@@ -333,7 +332,6 @@ function showUserModal() {
   });
 }
 
-
 async function parkCar() {
   if (busy) return;
   if (!navigator.geolocation) {
@@ -388,7 +386,6 @@ async function parkCar() {
 }
 
 getLocation();
-
 </script>
 </body>
 </html>
