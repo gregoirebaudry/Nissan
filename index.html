@@ -159,10 +159,10 @@
   </div>
 
   <script>
-    const API = "PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE";
+    const API = "https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec";
 
     const USERS = [
-      "Constance", "Christine", "Marie", "Clement", "Gregoire", "Laurent", "Bastien"
+      "Constance", "Christine", "Marie", "Bastien", "Clement", "Gregoire", "Laurent"
     ];
 
     const userSelect = document.getElementById("user");
@@ -230,7 +230,7 @@
     }
 
     async function fetchLatestLocation() {
-      if (!API || API.includes("PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")) {
+      if (!API || API.includes("https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec")) {
         setStatus("Renseignez d’abord l’URL du web app Google Apps Script dans index.html.");
         return;
       }
@@ -275,7 +275,7 @@
         return;
       }
 
-      if (!API || API.includes("PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")) {
+      if (!API || API.includes("https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec")) {
         alert("Ajoutez d’abord l’URL du web app Google Apps Script dans index.html.");
         return;
       }
