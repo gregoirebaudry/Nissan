@@ -11,18 +11,20 @@
   <style>
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, Arial;
+      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
       background: #f2f2f7;
+      color: #111;
     }
 
     .container {
       padding: 20px;
-      max-width: 500px;
+      max-width: 520px;
       margin: auto;
     }
 
     h1 {
       text-align: center;
+      margin-bottom: 20px;
     }
 
     .card {
@@ -30,27 +32,71 @@
       border-radius: 16px;
       padding: 15px;
       margin-bottom: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+
+    select {
+      width: 100%;
+      padding: 16px;
+      font-size: 18px;
+      border-radius: 12px;
+      border: 1px solid #d2d2d7;
+      background: white;
+      color: #111;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
     button {
       width: 100%;
       padding: 16px;
       margin-top: 10px;
-      font-size: 16px;
+      font-size: 17px;
+      font-weight: 600;
       border-radius: 12px;
       border: none;
       background: #007aff;
       color: white;
+      cursor: pointer;
+      transition: opacity 0.15s ease;
     }
 
-    .secondary {
-      background: #34c759;
+    button:disabled {
+      opacity: 0.55;
+      cursor: default;
     }
 
     #map {
-      height: 300px;
+      height: 320px;
       border-radius: 12px;
       margin-top: 10px;
+      overflow: hidden;
+    }
+
+    #info {
+      margin-top: 12px;
+      font-size: 15px;
+      line-height: 1.4;
+      color: #333;
+      white-space: pre-line;
+    }
+
+    #status {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #eef5ff;
+      color: #0b57d0;
+      font-size: 14px;
+      line-height: 1.4;
+      min-height: 22px;
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
     }
   </style>
 </head>
@@ -64,93 +110,192 @@
   </div>
 
   <div class="card">
-    <button onclick="getLocation()">📍 Où est le Nissan ?</button>
-    <button class="secondary" onclick="parkCar()">🚗 J’ai garé la voiture</button>
-    <button onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
+    <button id="whereBtn" onclick="getLocation()">📍 Où est le Nissan ?</button>
+    <button id="parkBtn" onclick="parkCar()">🚗 J’ai garé la voiture</button>
+    <button id="gmapsBtn" onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
+    <div id="status">Le service gratuit peut mettre 20 à 60 secondes à se réveiller. Appuyez une seule fois et patientez.</div>
+    <div class="hint">Les boutons se bloquent pendant le chargement pour éviter les doubles clics.</div>
   </div>
 
   <div class="card">
     <div id="map"></div>
-    <div id="info"></div>
+    <div id="info">Chargement de la dernière position…</div>
   </div>
 </div>
 
 <script>
 const API = "https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec";
-
-const USERS = ["Constance","Christine","Marie","Clement","Gregoire","Laurent","Bastien"];
+const USERS = ["Constance", "Christine", "Marie", "Clement", "Gregoire", "Laurent", "Bastien"];
 
 const userSelect = document.getElementById("user");
+const whereBtn = document.getElementById("whereBtn");
+const parkBtn = document.getElementById("parkBtn");
+const gmapsBtn = document.getElementById("gmapsBtn");
+const infoEl = document.getElementById("info");
+const statusEl = document.getElementById("status");
+
 USERS.forEach(u => {
-  let opt = document.createElement("option");
+  const opt = document.createElement("option");
   opt.value = u;
   opt.innerText = u;
   userSelect.appendChild(opt);
 });
 
-let saved = localStorage.getItem("user");
-if (saved) userSelect.value = saved;
+const saved = localStorage.getItem("user");
+if (saved && USERS.includes(saved)) {
+  userSelect.value = saved;
+} else {
+  userSelect.value = "Gregoire";
+  localStorage.setItem("user", "Gregoire");
+}
 
 userSelect.onchange = () => {
   localStorage.setItem("user", userSelect.value);
 };
 
-let map = L.map('map').setView([48.8566, 2.3522], 13);
+let map = L.map("map").setView([48.8566, 2.3522], 13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors"
+}).addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-let marker;
+let marker = null;
 let lat = null;
 let lon = null;
+let busy = false;
+
+function setBusy(isBusy, message) {
+  busy = isBusy;
+  whereBtn.disabled = isBusy;
+  parkBtn.disabled = isBusy;
+  gmapsBtn.disabled = isBusy;
+  if (message) statusEl.innerText = message;
+}
+
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleString("fr-FR");
+}
 
 function getLocation() {
-  fetch(API)
+  if (busy) return;
+
+  setBusy(true, "Chargement… Le service gratuit peut prendre un moment à se réveiller. Merci de patienter sans réappuyer.");
+
+  fetch(API + "?t=" + Date.now(), {
+    method: "GET",
+    cache: "no-store"
+  })
     .then(res => res.json())
     .then(data => {
       if (!data.latitude) {
-        document.getElementById("info").innerText = "Aucune position enregistrée";
+        infoEl.innerText = "Aucune position enregistrée.";
+        setBusy(false, "Aucune position enregistrée pour le moment.");
         return;
       }
 
-      lat = data.latitude;
-      lon = data.longitude;
+      lat = Number(data.latitude);
+      lon = Number(data.longitude);
 
       map.setView([lat, lon], 16);
 
       if (marker) map.removeLayer(marker);
       marker = L.marker([lat, lon]).addTo(map);
 
-      document.getElementById("info").innerText =
-        "Garée par " + data.updatedBy;
+      const updatedBy = data.updatedBy || "inconnu";
+      const updatedAt = formatDate(data.updatedAt);
+
+      infoEl.innerText = "Garée par " + updatedBy + (updatedAt ? "\nMise à jour : " + updatedAt : "");
+      setBusy(false, "Position chargée.");
+    })
+    .catch(err => {
+      console.error("GET error:", err);
+      infoEl.innerText = "Erreur de chargement.";
+      setBusy(false, "Impossible de charger la position.");
     });
 }
 
 function openGoogleMaps() {
-  if (!lat) {
-    alert("Localisation inconnue");
+  if (busy) return;
+
+  if (lat === null || lon === null) {
+    alert("Aucune position chargée. Appuyez d’abord sur « Où est le Nissan ? »");
     return;
   }
+
   window.open(`https://www.google.com/maps?q=${lat},${lon}`, "_blank");
 }
 
 function parkCar() {
-  navigator.geolocation.getCurrentPosition(pos => {
+  if (busy) return;
 
-    if (!confirm("Confirmer ?")) return;
+  if (!navigator.geolocation) {
+    alert("La géolocalisation n'est pas disponible sur cet appareil.");
+    return;
+  }
 
-    fetch(API, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        latitude: pos.coords.latitude,
-        longitude: pos.coords.longitude,
-        updatedBy: userSelect.value
+  setBusy(true, "Récupération de votre position…");
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    if (!confirm("Confirmer que vous avez garé la voiture ici ?")) {
+      setBusy(false, "Enregistrement annulé.");
+      return;
+    }
+
+    setBusy(true, "Enregistrement… Le service gratuit peut prendre un moment à répondre. Merci de patienter.");
+
+    try {
+      const response = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          updatedBy: userSelect.value
+        })
+      });
+
+      const data = await response.json();
+      console.log("POST response:", data);
+
+      if (data.error || data.success === false || data.ok === false) {
+        alert("Erreur lors de l'enregistrement : " + (data.error || "inconnue"));
+        setBusy(false, "Erreur lors de l'enregistrement.");
+        return;
+      }
+
+      statusEl.innerText = "Position enregistrée. Chargement de la dernière position…";
+      await fetch(API + "?t=" + Date.now(), {
+        method: "GET",
+        cache: "no-store"
       })
-    }).then(() => {
-      alert("Position enregistrée !");
-      getLocation();
-    });
+        .then(res => res.json())
+        .then(data => {
+          if (data.latitude) {
+            lat = Number(data.latitude);
+            lon = Number(data.longitude);
+            map.setView([lat, lon], 16);
+            if (marker) map.removeLayer(marker);
+            marker = L.marker([lat, lon]).addTo(map);
+            infoEl.innerText = "Garée par " + (data.updatedBy || "inconnu") + (data.updatedAt ? "\nMise à jour : " + formatDate(data.updatedAt) : "");
+          }
+        });
 
+      setBusy(false, "Position enregistrée.");
+    } catch (err) {
+      console.error("POST error:", err);
+      alert("Erreur réseau.");
+      setBusy(false, "Erreur réseau.");
+    }
+  }, err => {
+    console.error("GEO error:", err);
+    setBusy(false, "Impossible d’obtenir votre position.");
+    alert("Impossible d'obtenir la géolocalisation.");
+  }, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0
   });
 }
 
