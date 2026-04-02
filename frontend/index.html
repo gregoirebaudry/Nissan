@@ -3,412 +3,110 @@
 <head>
   <meta charset="UTF-8" />
   <title>Où est le Nissan ?</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#007aff" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Nissan" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #f2f2f7; color: #111; }
-    .container { padding: 20px; max-width: 520px; margin: auto; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    .card { background: white; border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-    select {
-      width: 100%; padding: 16px; font-size: 18px; border-radius: 12px;
-      border: 1px solid #d2d2d7; background: white; color: #111;
-      appearance: none; -webkit-appearance: none;
-    }
-    button {
-      width: 100%; padding: 16px; margin-top: 10px; font-size: 17px; font-weight: 600;
-      border-radius: 12px; border: none; background: #007aff; color: white; cursor: pointer;
-    }
-    button:disabled { opacity: 0.55; cursor: default; }
-    #map { height: 360px; border-radius: 12px; margin-top: 10px; overflow: hidden; }
-    #info { margin-top: 12px; font-size: 15px; line-height: 1.4; color: #333; white-space: pre-line; }
-    #status {
-      margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: #eef5ff;
-      color: #0b57d0; font-size: 14px; line-height: 1.4; min-height: 22px;
-    }
-    .hint { margin-top: 8px; font-size: 12px; color: #666; text-align: center; }
-    .subactions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
-    .subbutton {
-      background: #eaf3ff; color: #007aff; border: 1px solid #cfe3ff; padding: 12px 14px;
-      border-radius: 12px; font-size: 15px; font-weight: 600; text-align: center; cursor: pointer;
-      user-select: none;
-    }
-    .subbutton.disabled { opacity: 0.55; cursor: default; }
-    #historyPanel { display: none; margin-top: 12px; border-top: 1px solid #ececec; padding-top: 12px; }
-    .historyTitle { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; }
-    .historyItem {
-      border: 1px solid #ececec; border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; background: #fafafa;
-    }
-    .historyItemTitle { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
-    .historyLink {
-      display: inline-block; color: #007aff; font-size: 13px; text-decoration: none; font-weight: 600;
-    }
-    #modal {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
-      align-items: center; justify-content: center; padding: 20px;
-    }
-    #modalContent {
-      background: white; padding: 20px; border-radius: 16px; width: 100%; max-width: 320px;
-      text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-    }
-    .modalBtn {
-      width: 100%; padding: 12px; border-radius: 10px; border: none; margin-top: 10px;
-      font-size: 16px; font-weight: 600; cursor: pointer;
-    }
-    .confirm { background: #007aff; color: white; }
-    .cancel { background: #e5e5ea; color: #111; }
-    .history-pin {
-      background: #34c759; color: white; width: 28px; height: 28px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
-      border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    }
-    .current-pin {
-      background: #007aff; color: white; width: 30px; height: 30px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
-      border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,Arial; background:#f2f2f7; }
+    .container { padding:20px; max-width:520px; margin:auto; }
+    .card { background:white; border-radius:16px; padding:15px; margin-bottom:15px; }
+    button { width:100%; padding:16px; margin-top:10px; border-radius:12px; border:none; background:#007aff; color:white; }
+    select { width:100%; padding:16px; font-size:18px; border-radius:12px; }
+    #map { height:320px; border-radius:12px; margin-top:10px; }
+    .historyItem { margin-bottom:6px; }
+    .historyLink { color:#007aff; font-weight:600; text-decoration:none; }
   </style>
 </head>
 <body>
+
 <div class="container">
-  <h1>🚗 Où est le Nissan ?</h1>
+  <h2>🚗 Où est le Nissan ?</h2>
 
   <div class="card">
     <select id="user"></select>
   </div>
 
   <div class="card">
-    <button id="whereBtn" onclick="getLocation()">📍 Où est le Nissan ?</button>
-    <div class="subactions">
-      <div id="historyToggle" class="subbutton" onclick="toggleHistory()">Voir les 5 derniers stationnements</div>
-    </div>
-    <button id="parkBtn" onclick="parkCar()">🚗 J’ai garé la voiture</button>
-    <button id="gmapsBtn" onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
-    <div id="status">Le service gratuit peut mettre 20 à 60 secondes à se réveiller. Appuyez une seule fois et patientez.</div>
-    <div class="hint">Les boutons se bloquent pendant le chargement pour éviter les doubles clics.</div>
+    <button onclick="getLocation()">📍 Où est le Nissan ?</button>
+    <button onclick="parkCar()">🚗 J’ai garé la voiture</button>
+    <button onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
 
     <div id="historyPanel">
-      <div class="historyTitle">5 derniers stationnements</div>
-      <div id="historyList">Chargement…</div>
+      <div id="historyList"></div>
     </div>
   </div>
 
   <div class="card">
     <div id="map"></div>
-    <div id="info">Chargement de la dernière position…</div>
-  </div>
-</div>
-
-<div id="modal">
-  <div id="modalContent">
-    <p>Confirmer que vous avez garé la voiture ici ?</p>
-    <button id="confirmYes" class="modalBtn confirm">Confirmer</button>
-    <button id="confirmNo" class="modalBtn cancel">Annuler</button>
   </div>
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbznVgv8Cyt_Eo5guzlN1j1xDfqnxWBat-nZLApH3Vw_oTLdyUXKaZ_qkax0KLXgJEojmw/exec";
-const USERS = ["Constance", "Christine", "Marie", "Clement", "Gregoire", "Laurent", "Bastien"];
+const API = "https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec";
+const USERS = ["Constance","Christine","Marie","Clement","Gregoire","Laurent","Bastien"];
 
 const userSelect = document.getElementById("user");
-const whereBtn = document.getElementById("whereBtn");
-const parkBtn = document.getElementById("parkBtn");
-const gmapsBtn = document.getElementById("gmapsBtn");
-const historyToggleEl = document.getElementById("historyToggle");
-const historyPanelEl = document.getElementById("historyPanel");
-const historyListEl = document.getElementById("historyList");
-const infoEl = document.getElementById("info");
-const statusEl = document.getElementById("status");
-
-USERS.forEach((u) => {
-  const opt = document.createElement("option");
-  opt.value = u;
-  opt.innerText = u;
+USERS.forEach(u=>{
+  let opt=document.createElement("option");
+  opt.value=u; opt.innerText=u;
   userSelect.appendChild(opt);
 });
 
-const saved = localStorage.getItem("user");
-if (saved && USERS.includes(saved)) {
-  userSelect.value = saved;
-} else {
-  userSelect.value = "Gregoire";
-  localStorage.setItem("user", "Gregoire");
-}
+let map=L.map("map").setView([48.8566,2.3522],13);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-userSelect.onchange = () => localStorage.setItem("user", userSelect.value);
+let marker, lat=null, lon=null;
 
-let map = L.map("map").setView([48.8566, 2.3522], 13);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "&copy; OpenStreetMap contributors"
-}).addTo(map);
-
-let currentMarker = null;
-let historyMarkers = [];
-let lat = null;
-let lon = null;
-let busy = false;
-let historyVisible = false;
-let historyItems = [];
-
-function currentIcon() {
-  return L.divIcon({
-    className: "",
-    html: '<div class="current-pin">N</div>',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
+function getLocation(){
+  fetch(API).then(r=>r.json()).then(d=>{
+    if(!d.latitude) return;
+    lat=d.latitude; lon=d.longitude;
+    map.setView([lat,lon],16);
+    if(marker) map.removeLayer(marker);
+    marker=L.marker([lat,lon]).addTo(map);
   });
 }
 
-function historyIcon(num) {
-  return L.divIcon({
-    className: "",
-    html: `<div class="history-pin">${num}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
-  });
-}
-
-function setBusy(state, msg) {
-  busy = state;
-  whereBtn.disabled = state;
-  parkBtn.disabled = state;
-  gmapsBtn.disabled = state;
-  historyToggleEl.classList.toggle("disabled", state);
-  if (msg) statusEl.innerText = msg;
-}
-
-function formatDate(value) {
-  if (!value) return "";
-  const d = new Date(value);
-  if (isNaN(d.getTime())) return value;
-  return d.toLocaleString("fr-FR");
-}
-
-function clearHistoryMarkers() {
-  historyMarkers.forEach((m) => map.removeLayer(m));
-  historyMarkers = [];
-}
-
-function updateCurrentMarker(newLat, newLon) {
-  lat = Number(newLat);
-  lon = Number(newLon);
-
-  if (currentMarker) map.removeLayer(currentMarker);
-  currentMarker = L.marker([lat, lon], { icon: currentIcon() }).addTo(map);
-  currentMarker.bindPopup("Position actuelle");
-}
-
-function fitMapToVisibleMarkers() {
-  const points = [];
-  if (currentMarker) points.push(currentMarker.getLatLng());
-  historyMarkers.forEach((m) => points.push(m.getLatLng()));
-
-  if (!points.length) return;
-  if (points.length === 1) {
-    map.setView(points[0], 16);
-    return;
-  }
-
-  map.fitBounds(L.latLngBounds(points), { padding: [30, 30] });
-}
-
-function getLocation() {
-  if (busy) return;
-
-  setBusy(true, "Chargement… Le service gratuit peut prendre un moment à se réveiller. Merci de patienter sans réappuyer.");
-
-  fetch(API + "?t=" + Date.now(), { method: "GET", cache: "no-store" })
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.latitude) {
-        infoEl.innerText = "Aucune position enregistrée.";
-        setBusy(false, "Aucune position enregistrée pour le moment.");
-        return;
-      }
-
-      updateCurrentMarker(data.latitude, data.longitude);
-      if (!historyVisible) {
-        map.setView([lat, lon], 16);
-      } else {
-        fitMapToVisibleMarkers();
-      }
-
-      const updatedBy = data.updatedBy || "inconnu";
-      const updatedAt = formatDate(data.updatedAt);
-      infoEl.innerText = "Garée par " + updatedBy + (updatedAt ? "\nMise à jour : " + updatedAt : "");
-      setBusy(false, "Position chargée.");
-    })
-    .catch((err) => {
-      console.error("GET error:", err);
-      infoEl.innerText = "Erreur de chargement.";
-      setBusy(false, "Impossible de charger la position.");
-    });
-}
-
-function renderHistory(items) {
-  historyItems = items || [];
-  clearHistoryMarkers();
-
-  if (!historyItems.length) {
-    historyListEl.innerHTML = '<div class="historyItem">Aucun historique disponible.</div>';
-    return;
-  }
-
-  historyListEl.innerHTML = historyItems.map((item, index) => {
-    const mapsUrl = `https://www.google.com/maps?q=${Number(item.latitude)},${Number(item.longitude)}`;
-    return `
-      <div class="historyItem">
-        <div class="historyItemTitle">Emplacement ${index + 1}</div>
-        <a class="historyLink" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps</a>
-      </div>
-    `;
+function renderHistory(items){
+  const el=document.getElementById("historyList");
+  el.innerHTML = items.map((item,i)=>{
+    const url=`https://www.google.com/maps?q=${item.latitude},${item.longitude}`;
+    return `<div class="historyItem">
+      <a class="historyLink" href="${url}" target="_blank">(${i+1}) : Ouvrir dans Google Maps</a>
+    </div>`;
   }).join("");
-
-  historyItems.forEach((item, index) => {
-    const marker = L.marker([Number(item.latitude), Number(item.longitude)], {
-      icon: historyIcon(index + 1)
-    }).addTo(map);
-    marker.bindPopup(`Historique ${index + 1}`);
-    historyMarkers.push(marker);
-  });
-
-  fitMapToVisibleMarkers();
 }
 
-function loadHistory() {
-  if (busy) return;
-  setBusy(true, "Chargement de l’historique…");
-  historyListEl.innerHTML = "Chargement…";
-  historyPanelEl.style.display = "block";
-  historyVisible = true;
-  historyToggleEl.innerText = "Masquer les 5 derniers stationnements";
-
-  fetch(API + "?history=5&t=" + Date.now(), { method: "GET", cache: "no-store" })
-    .then((res) => res.json())
-    .then((data) => {
-      renderHistory(data.items || []);
-      setBusy(false, "Historique chargé.");
-    })
-    .catch((err) => {
-      console.error("HISTORY error:", err);
-      historyListEl.innerHTML = '<div class="historyItem">Impossible de charger l’historique.</div>';
-      historyItems = [];
-      clearHistoryMarkers();
-      setBusy(false, "Impossible de charger l’historique.");
-    });
-}
-
-function toggleHistory() {
-  if (busy) return;
-
-  if (historyVisible) {
-    historyVisible = false;
-    historyPanelEl.style.display = "none";
-    historyToggleEl.innerText = "Voir les 5 derniers stationnements";
-    clearHistoryMarkers();
-    if (lat !== null && lon !== null) {
-      map.setView([lat, lon], 16);
-    }
-    return;
-  }
-
-  loadHistory();
-}
-
-function openGoogleMaps() {
-  if (busy) return;
-  if (lat === null || lon === null) {
-    alert("Aucune position chargée. Appuyez d’abord sur « Où est le Nissan ? »");
-    return;
-  }
-  window.open(`https://www.google.com/maps?q=${lat},${lon}`, "_blank");
-}
-
-function showConfirmModal() {
-  return new Promise((resolve) => {
-    const modal = document.getElementById("modal");
-    modal.style.display = "flex";
-    document.getElementById("confirmYes").onclick = () => {
-      modal.style.display = "none";
-      resolve(true);
-    };
-    document.getElementById("confirmNo").onclick = () => {
-      modal.style.display = "none";
-      resolve(false);
-    };
+function loadHistory(){
+  fetch(API+"?history=5").then(r=>r.json()).then(d=>{
+    renderHistory(d.items||[]);
   });
 }
 
-function parkCar() {
-  if (busy) return;
-  if (!navigator.geolocation) {
-    alert("La géolocalisation n'est pas disponible sur cet appareil.");
-    return;
-  }
+function openGoogleMaps(){
+  if(!lat) return;
+  window.open(`https://www.google.com/maps?q=${lat},${lon}`);
+}
 
-  setBusy(true, "Récupération de votre position…");
-
-  navigator.geolocation.getCurrentPosition(async (pos) => {
-    const confirmed = await showConfirmModal();
-    if (!confirmed) {
-      setBusy(false, "Enregistrement annulé.");
-      return;
-    }
-
-    setBusy(true, "Enregistrement… Le service gratuit peut prendre un moment à répondre. Merci de patienter.");
-
-    try {
-      const response = await fetch(API, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          updatedBy: userSelect.value
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.error || data.success === false || data.ok === false) {
-        alert("Erreur lors de l'enregistrement : " + (data.error || "inconnue"));
-        setBusy(false, "Erreur lors de l'enregistrement.");
-        return;
-      }
-
-      statusEl.innerText = "Position enregistrée. Chargement de la dernière position…";
-      getLocation();
-
-      if (historyVisible) {
-        setTimeout(loadHistory, 300);
-      }
-    } catch (err) {
-      console.error("POST error:", err);
-      alert("Erreur réseau.");
-      setBusy(false, "Erreur réseau.");
-    }
-  }, (err) => {
-    console.error("GEO error:", err);
-    setBusy(false, "Impossible d’obtenir votre position.");
-    alert("Impossible d'obtenir la géolocalisation.");
-  }, {
-    enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 0
+function parkCar(){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    fetch(API,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify({
+        latitude:pos.coords.latitude,
+        longitude:pos.coords.longitude,
+        updatedBy:userSelect.value
+      })
+    }).then(()=>{ getLocation(); loadHistory(); });
   });
 }
 
 getLocation();
+loadHistory();
 </script>
+
 </body>
 </html>
