@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Où est le Nissan ?</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+body{font-family:-apple-system;background:#f2f2f7;margin:0}
+.container{padding:20px;max-width:500px;margin:auto}
+.card{background:white;border-radius:16px;padding:15px;margin-bottom:15px}
+button{width:100%;padding:16px;margin-top:10px;border-radius:12px;border:none;background:#007aff;color:white}
+.secondary{background:#34c759}
+#map{height:300px;border-radius:12px}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🚗 Où est le Nissan ?</h1>
+<div class="card"><select id="user"></select></div>
+<div class="card">
+<button onclick="getLocation()">📍 Où est le Nissan ?</button>
+<button class="secondary" onclick="parkCar()">🚗 J’ai garé la voiture</button>
+<button onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
+</div>
+<div class="card">
+<div id="map"></div>
+<div id="info"></div>
+</div>
+</div>
+
+<script>
+const API="https://YOUR_BACKEND_URL";
+const USERS=["Constance","Christine","Marie","Clement","Gregoire","Laurent","Bastien"];
+const userSelect=document.getElementById("user");
+USERS.forEach(u=>{let o=document.createElement("option");o.value=u;o.innerText=u;userSelect.appendChild(o);});
+let saved=localStorage.getItem("user"); if(saved) userSelect.value=saved;
+userSelect.onchange=()=>localStorage.setItem("user",userSelect.value);
+
+let map=L.map('map').setView([48.8566,2.3522],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+let marker,lat,lon;
+
+function getLocation(){
+fetch(API+"/location").then(r=>r.json()).then(d=>{
+if(!d.latitude)return;
+lat=d.latitude;lon=d.longitude;
+map.setView([lat,lon],16);
+if(marker)map.removeLayer(marker);
+marker=L.marker([lat,lon]).addTo(map);
+document.getElementById("info").innerText="Garée par "+d.updated_by;
+});
+}
+
+function openGoogleMaps(){
+if(!lat){alert("Localisation inconnue");return;}
+window.open(`https://www.google.com/maps?q=${lat},${lon}`,"_blank");
+}
+
+function parkCar(){
+navigator.geolocation.getCurrentPosition(p=>{
+if(!confirm("Confirmer ?"))return;
+fetch(API+"/location",{method:"POST",headers:{"Content-Type":"application/json"},
+body:JSON.stringify({latitude:p.coords.latitude,longitude:p.coords.longitude,updatedBy:userSelect.value})})
+.then(()=>getLocation());
+});
+}
+
+getLocation();
+</script>
+</body>
+</html>
