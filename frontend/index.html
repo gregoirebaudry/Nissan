@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <title>Où est le Nissan ?</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#007aff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Nissan" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -41,6 +47,10 @@
       font-size: 18px;
       border-radius: 12px;
       border: 1px solid #d2d2d7;
+      background: white;
+      color: #111;
+      appearance: none;
+      -webkit-appearance: none;
     }
 
     button {
@@ -48,48 +58,142 @@
       padding: 16px;
       margin-top: 10px;
       font-size: 17px;
+      font-weight: 600;
       border-radius: 12px;
       border: none;
       background: #007aff;
       color: white;
+      cursor: pointer;
+      transition: opacity 0.15s ease;
     }
 
     button:disabled {
-      opacity: 0.5;
+      opacity: 0.55;
+      cursor: default;
     }
 
     #map {
       height: 320px;
       border-radius: 12px;
       margin-top: 10px;
+      overflow: hidden;
+    }
+
+    #info {
+      margin-top: 12px;
+      font-size: 15px;
+      line-height: 1.4;
+      color: #333;
+      white-space: pre-line;
     }
 
     #status {
-      margin-top: 10px;
-      font-size: 14px;
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #eef5ff;
       color: #0b57d0;
+      font-size: 14px;
+      line-height: 1.4;
+      min-height: 22px;
     }
 
-    /* Modal */
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #666;
+      text-align: center;
+    }
+
+    .subactions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .subbutton {
+      background: #eaf3ff;
+      color: #007aff;
+      border: 1px solid #cfe3ff;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .subbutton.disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+
+    #historyPanel {
+      display: none;
+      margin-top: 12px;
+      border-top: 1px solid #ececec;
+      padding-top: 12px;
+    }
+
+    .historyTitle {
+      font-size: 14px;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .historyItem {
+      border: 1px solid #ececec;
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #fafafa;
+    }
+
+    .historyItemTitle {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .historyMeta {
+      font-size: 13px;
+      color: #555;
+      line-height: 1.35;
+      white-space: pre-line;
+    }
+
+    .historyActions {
+      margin-top: 6px;
+    }
+
+    .historyLink {
+      color: #007aff;
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
     #modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(0,0,0,0.4);
       align-items: center;
       justify-content: center;
+      padding: 20px;
     }
 
     #modalContent {
       background: white;
       padding: 20px;
       border-radius: 16px;
-      width: 80%;
-      max-width: 300px;
+      width: 100%;
+      max-width: 320px;
       text-align: center;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
     }
 
     .modalBtn {
@@ -98,16 +202,13 @@
       border-radius: 10px;
       border: none;
       margin-top: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
     }
 
-    .confirm {
-      background: #007aff;
-      color: white;
-    }
-
-    .cancel {
-      background: #e5e5ea;
-    }
+    .confirm { background: #007aff; color: white; }
+    .cancel { background: #e5e5ea; color: #111; }
   </style>
 </head>
 <body>
@@ -121,18 +222,29 @@
 
   <div class="card">
     <button id="whereBtn" onclick="getLocation()">📍 Où est le Nissan ?</button>
+
+    <div class="subactions">
+      <div id="historyToggle" class="subbutton" onclick="toggleHistory()">Voir les 5 derniers stationnements</div>
+    </div>
+
     <button id="parkBtn" onclick="parkCar()">🚗 J’ai garé la voiture</button>
-    <button onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
-    <div id="status">Le serveur gratuit peut mettre 20–60s à se réveiller.</div>
+    <button id="gmapsBtn" onclick="openGoogleMaps()">🗺️ Ouvrir dans Google Maps</button>
+
+    <div id="status">Le service gratuit peut mettre 20 à 60 secondes à se réveiller. Appuyez une seule fois et patientez.</div>
+    <div class="hint">Les boutons se bloquent pendant le chargement pour éviter les doubles clics.</div>
+
+    <div id="historyPanel">
+      <div class="historyTitle">5 derniers stationnements</div>
+      <div id="historyList">Chargement…</div>
+    </div>
   </div>
 
   <div class="card">
     <div id="map"></div>
-    <div id="info"></div>
+    <div id="info">Chargement de la dernière position…</div>
   </div>
 </div>
 
-<!-- Custom Modal -->
 <div id="modal">
   <div id="modalContent">
     <p>Confirmer que vous avez garé la voiture ici ?</p>
@@ -142,115 +254,249 @@
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbx86TlKMqmybMKGrtGjCgjTlOhqEsuSISqKkak-jDE4WlC21nL2sNZ0ayjGkdOL08w1gw/exec";
-const USERS = ["Constance","Christine","Marie","Clement","Gregoire","Laurent","Bastien"];
+const API = "https://script.google.com/macros/s/AKfycbxM6_HHhNnXWBMYGEPL9bnXnxdNV7x0cnPNPrKDkwCOqjlKFjeK4s-zLDqy9iRD9WPSsQ/exec";
+const USERS = ["Constance", "Christine", "Marie", "Clement", "Gregoire", "Laurent", "Bastien"];
 
 const userSelect = document.getElementById("user");
 const whereBtn = document.getElementById("whereBtn");
 const parkBtn = document.getElementById("parkBtn");
+const gmapsBtn = document.getElementById("gmapsBtn");
+const historyToggleEl = document.getElementById("historyToggle");
+const historyPanelEl = document.getElementById("historyPanel");
+const historyListEl = document.getElementById("historyList");
+const infoEl = document.getElementById("info");
 const statusEl = document.getElementById("status");
 
-USERS.forEach(u => {
-  let opt = document.createElement("option");
+USERS.forEach((u) => {
+  const opt = document.createElement("option");
   opt.value = u;
   opt.innerText = u;
   userSelect.appendChild(opt);
 });
 
-let saved = localStorage.getItem("user");
-if (saved) userSelect.value = saved;
+const saved = localStorage.getItem("user");
+if (saved && USERS.includes(saved)) {
+  userSelect.value = saved;
+} else {
+  userSelect.value = "Gregoire";
+  localStorage.setItem("user", "Gregoire");
+}
 
 userSelect.onchange = () => {
   localStorage.setItem("user", userSelect.value);
 };
 
 let map = L.map("map").setView([48.8566, 2.3522], 13);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "&copy; OpenStreetMap contributors"
+}).addTo(map);
 
-let marker, lat=null, lon=null;
-let busy=false;
+let marker = null;
+let lat = null;
+let lon = null;
+let busy = false;
+let historyVisible = false;
 
-function setBusy(state, msg){
-  busy=state;
-  whereBtn.disabled=state;
-  parkBtn.disabled=state;
-  if(msg) statusEl.innerText=msg;
+function setBusy(state, msg) {
+  busy = state;
+  whereBtn.disabled = state;
+  parkBtn.disabled = state;
+  gmapsBtn.disabled = state;
+  historyToggleEl.classList.toggle("disabled", state);
+  if (msg) statusEl.innerText = msg;
 }
 
-function showConfirmModal(){
-  return new Promise(resolve=>{
-    const modal=document.getElementById("modal");
-    modal.style.display="flex";
+function formatDate(value) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return value;
+  return d.toLocaleString("fr-FR");
+}
 
-    document.getElementById("confirmYes").onclick=()=>{
-      modal.style.display="none";
+function updateMap(newLat, newLon) {
+  lat = Number(newLat);
+  lon = Number(newLon);
+  map.setView([lat, lon], 16);
+
+  if (marker) map.removeLayer(marker);
+  marker = L.marker([lat, lon]).addTo(map);
+}
+
+function getLocation() {
+  if (busy) return;
+
+  setBusy(true, "Chargement… Le service gratuit peut prendre un moment à se réveiller. Merci de patienter sans réappuyer.");
+
+  fetch(API + "?t=" + Date.now(), {
+    method: "GET",
+    cache: "no-store"
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (!data.latitude) {
+        infoEl.innerText = "Aucune position enregistrée.";
+        setBusy(false, "Aucune position enregistrée pour le moment.");
+        return;
+      }
+
+      updateMap(data.latitude, data.longitude);
+
+      const updatedBy = data.updatedBy || "inconnu";
+      const updatedAt = formatDate(data.updatedAt);
+
+      infoEl.innerText = "Garée par " + updatedBy + (updatedAt ? "\\nMise à jour : " + updatedAt : "");
+      setBusy(false, "Position chargée.");
+    })
+    .catch((err) => {
+      console.error("GET error:", err);
+      infoEl.innerText = "Erreur de chargement.";
+      setBusy(false, "Impossible de charger la position.");
+    });
+}
+
+function renderHistory(items) {
+  if (!items || !items.length) {
+    historyListEl.innerHTML = '<div class="historyMeta">Aucun historique disponible.</div>';
+    return;
+  }
+
+  historyListEl.innerHTML = items.map((item, index) => {
+    const mapsUrl = `https://www.google.com/maps?q=${Number(item.latitude)},${Number(item.longitude)}`;
+    return `
+      <div class="historyItem">
+        <div class="historyItemTitle">${index + 1}. ${item.updatedBy || "Inconnu"}</div>
+        <div class="historyMeta">Mis à jour : ${formatDate(item.updatedAt)}\nCoordonnées : ${Number(item.latitude).toFixed(6)}, ${Number(item.longitude).toFixed(6)}</div>
+        <div class="historyActions">
+          <a class="historyLink" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">Ouvrir dans Google Maps</a>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function loadHistory() {
+  if (busy) return;
+  setBusy(true, "Chargement de l’historique…");
+
+  historyListEl.innerHTML = "Chargement…";
+  historyPanelEl.style.display = "block";
+  historyVisible = true;
+  historyToggleEl.innerText = "Masquer les 5 derniers stationnements";
+
+  fetch(API + "?history=5&t=" + Date.now(), {
+    method: "GET",
+    cache: "no-store"
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      renderHistory(data.items || []);
+      setBusy(false, "Historique chargé.");
+    })
+    .catch((err) => {
+      console.error("HISTORY error:", err);
+      historyListEl.innerHTML = '<div class="historyMeta">Impossible de charger l’historique.</div>';
+      setBusy(false, "Impossible de charger l’historique.");
+    });
+}
+
+function toggleHistory() {
+  if (busy) return;
+
+  if (historyVisible) {
+    historyVisible = false;
+    historyPanelEl.style.display = "none";
+    historyToggleEl.innerText = "Voir les 5 derniers stationnements";
+    return;
+  }
+
+  loadHistory();
+}
+
+function openGoogleMaps() {
+  if (busy) return;
+
+  if (lat === null || lon === null) {
+    alert("Aucune position chargée. Appuyez d’abord sur « Où est le Nissan ? »");
+    return;
+  }
+
+  window.open(`https://www.google.com/maps?q=${lat},${lon}`, "_blank");
+}
+
+function showConfirmModal() {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("modal");
+    modal.style.display = "flex";
+
+    document.getElementById("confirmYes").onclick = () => {
+      modal.style.display = "none";
       resolve(true);
     };
 
-    document.getElementById("confirmNo").onclick=()=>{
-      modal.style.display="none";
+    document.getElementById("confirmNo").onclick = () => {
+      modal.style.display = "none";
       resolve(false);
     };
   });
 }
 
-function getLocation(){
-  if(busy) return;
+function parkCar() {
+  if (busy) return;
 
-  setBusy(true,"Chargement…");
-
-  fetch(API+"?t="+Date.now())
-    .then(r=>r.json())
-    .then(d=>{
-      if(!d.latitude){
-        setBusy(false,"Aucune position");
-        return;
-      }
-
-      lat=d.latitude;
-      lon=d.longitude;
-
-      map.setView([lat,lon],16);
-      if(marker) map.removeLayer(marker);
-      marker=L.marker([lat,lon]).addTo(map);
-
-      setBusy(false,"Position chargée");
-    });
-}
-
-function openGoogleMaps(){
-  if(!lat){
-    alert("Aucune position");
+  if (!navigator.geolocation) {
+    alert("La géolocalisation n'est pas disponible sur cet appareil.");
     return;
   }
-  window.open(`https://www.google.com/maps?q=${lat},${lon}`);
-}
 
-async function parkCar(){
-  if(busy) return;
+  setBusy(true, "Récupération de votre position…");
 
-  navigator.geolocation.getCurrentPosition(async pos=>{
-
-    const confirmed=await showConfirmModal();
-    if(!confirmed){
-      setBusy(false,"Annulé");
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const confirmed = await showConfirmModal();
+    if (!confirmed) {
+      setBusy(false, "Enregistrement annulé.");
       return;
     }
 
-    setBusy(true,"Enregistrement…");
+    setBusy(true, "Enregistrement… Le service gratuit peut prendre un moment à répondre. Merci de patienter.");
 
-    await fetch(API,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain"},
-      body:JSON.stringify({
-        latitude:pos.coords.latitude,
-        longitude:pos.coords.longitude,
-        updatedBy:userSelect.value
-      })
-    });
+    try {
+      const response = await fetch(API, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          updatedBy: userSelect.value
+        })
+      });
 
-    setBusy(false,"Position enregistrée");
-    getLocation();
+      const data = await response.json();
+
+      if (data.error || data.success === false || data.ok === false) {
+        alert("Erreur lors de l'enregistrement : " + (data.error || "inconnue"));
+        setBusy(false, "Erreur lors de l'enregistrement.");
+        return;
+      }
+
+      statusEl.innerText = "Position enregistrée. Chargement de la dernière position…";
+      getLocation();
+
+      if (historyVisible) {
+        setTimeout(loadHistory, 300);
+      }
+    } catch (err) {
+      console.error("POST error:", err);
+      alert("Erreur réseau.");
+      setBusy(false, "Erreur réseau.");
+    }
+  }, (err) => {
+    console.error("GEO error:", err);
+    setBusy(false, "Impossible d’obtenir votre position.");
+    alert("Impossible d'obtenir la géolocalisation.");
+  }, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 0
   });
 }
 
