@@ -1,8 +1,5 @@
 {
-  "name": "Où est le Nissan ?",
-  "short_name": "Nissan",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#f2f2f7",
-  "theme_color": "#007aff"
+"name":"Où est le Nissan ?",
+"short_name":"Nissan",
+"display":"standalone"
 }
