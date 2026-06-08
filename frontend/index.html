@@ -366,7 +366,7 @@ async function parkCar() {
         setBusy(false, "Erreur lors de l'enregistrement.");
         return;
       }
-      statusEl.innerText = "Position enregistrée. Chargement de la dernière position…";
+      setBusy(false, "Position enregistrée. Chargement de la dernière position…");
       getLocation();
       if (historyVisible) setTimeout(loadHistory, 300);
     } catch (err) {
