@@ -7,16 +7,21 @@
   <meta name="theme-color" content="#007aff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Nissan" />
+  <meta name="apple-mobile-web-app-title" content="Voiture" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif; background: #f2f2f7; color: #111; }
     .container { padding: 20px; max-width: 520px; margin: auto; }
-    h1 { text-align: center; margin-bottom: 20px; font-size: 30px; }
+    h1 { text-align: center; margin-bottom: 4px; font-size: 28px; }
+    #vehicleLabel {
+      text-align: center; font-size: 15px; color: #555; margin-bottom: 16px; cursor: pointer;
+    }
+    #vehicleLabel span { color: #007aff; font-weight: 600; }
     .card { background: white; border-radius: 16px; padding: 15px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     button {
       width: 100%; padding: 16px; margin-top: 10px; font-size: 17px; font-weight: 600;
@@ -36,20 +41,62 @@
     .historyTitle { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; }
     .historyItem { margin-bottom: 6px; }
     .historyLink { display: inline-block; color: #007aff; font-size: 13px; text-decoration: none; font-weight: 600; }
-    #modal, #userModal {
+
+    /* ── Modals ── */
+    .modal-backdrop {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
       align-items: center; justify-content: center; padding: 20px; z-index: 999;
     }
-    #modalContent, #userModalContent {
-      background: white; padding: 20px; border-radius: 16px; width: 100%; max-width: 340px;
+    .modal-box {
+      background: white; padding: 20px; border-radius: 16px; width: 100%; max-width: 360px;
       text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.15);
     }
+    .modal-title { font-size: 17px; font-weight: 700; margin: 0 0 4px; }
+    .modal-sub { font-size: 14px; color: #666; margin: 0 0 14px; }
     .modalBtn {
       width: 100%; padding: 12px; border-radius: 10px; border: none; margin-top: 10px;
       font-size: 16px; font-weight: 600; cursor: pointer;
     }
     .confirm { background: #007aff; color: white; }
     .cancel { background: #e5e5ea; color: #111; }
+
+    /* Vehicle picker grid */
+    .carGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .carChoice {
+      padding: 14px 10px; border-radius: 12px; border: 1.5px solid #d2d2d7; background: #fff;
+      font-size: 15px; font-weight: 600; color: #111; cursor: pointer; text-align: center;
+      transition: border-color .15s, background .15s;
+    }
+    .carChoice:hover { border-color: #007aff; background: #f0f6ff; }
+    .carChoice.selected { border-color: #007aff; background: #eef5ff; color: #007aff; }
+    .addCarBtn {
+      width: 100%; padding: 12px; border-radius: 12px; border: 1.5px dashed #007aff;
+      background: #f5f9ff; color: #007aff; font-size: 15px; font-weight: 600; cursor: pointer;
+      margin-bottom: 0;
+    }
+    .addCarBtn:hover { background: #eef5ff; }
+
+    /* Add-car inline form */
+    #addCarForm { display: none; margin-top: 10px; }
+    #addCarForm input {
+      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1.5px solid #d2d2d7;
+      font-size: 15px; margin-bottom: 8px; outline: none;
+    }
+    #addCarForm input:focus { border-color: #007aff; }
+    .addCarRow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .addCarRow button { margin-top: 0; font-size: 15px; padding: 12px; }
+
+    /* User grid */
+    .userGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .userChoice {
+      padding: 12px 10px; border-radius: 12px; border: 1px solid #d2d2d7; background: #fff;
+      font-size: 15px; font-weight: 600; color: #111; cursor: pointer;
+    }
+    .userChoice.selected { border-color: #007aff; background: #eef5ff; color: #007aff; }
+
+    .modalText { font-size: 16px; line-height: 1.35; }
+
+    /* Pins */
     .history-pin {
       background: #34c759; color: white; width: 28px; height: 28px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
@@ -60,29 +107,19 @@
       display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700;
       border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
-    .userGrid {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px;
-    }
-    .userChoice {
-      padding: 12px 10px; border-radius: 12px; border: 1px solid #d2d2d7; background: #fff;
-      font-size: 15px; font-weight: 600; color: #111; cursor: pointer;
-    }
-    .userChoice.selected {
-      border-color: #007aff; background: #eef5ff; color: #007aff;
-    }
-    .modalText { font-size: 16px; line-height: 1.35; }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>🚗 Où est le Nissan ?</h1>
+  <div id="vehicleLabel">Nissan : <span id="vehicleName">—</span> &nbsp;·&nbsp; <span style="color:#007aff">changer</span></div>
 
   <div class="card">
     <div class="topButtons">
-      <button id="whereBtn" onclick="getLocation()">📍 Où est le Nissan ?</button>
+      <button id="whereBtn" onclick="getLocation()">📍 Où est-il ?</button>
       <button id="historyBtn" onclick="toggleHistory()">5 derniers stationnements</button>
     </div>
-    <button id="parkBtn" onclick="parkCar()">🚗 J’ai garé la voiture</button>
+    <button id="parkBtn" onclick="parkCar()">🚗 J'ai garé le Nissan</button>
 
     <div id="status">Le service gratuit peut mettre 20 à 60 secondes à se réveiller. Appuyez une seule fois et patientez.</div>
     <div class="hint">Les boutons se bloquent pendant le chargement pour éviter les doubles clics.</div>
@@ -99,17 +136,37 @@
   </div>
 </div>
 
-<div id="modal">
-  <div id="modalContent">
-    <p class="modalText">Confirmer que vous avez garé la voiture ici ?</p>
+<!-- ── Vehicle Picker Modal ── -->
+<div id="carModal" class="modal-backdrop">
+  <div class="modal-box">
+    <p class="modal-title">Quel véhicule ?</p>
+    <p class="modal-sub">Choisissez le véhicule à localiser ou garer.</p>
+    <div id="carGrid" class="carGrid"></div>
+    <button class="addCarBtn" onclick="toggleAddCarForm()">＋ Ajouter un véhicule</button>
+    <div id="addCarForm">
+      <input id="newCarInput" type="text" placeholder="Nom du véhicule" maxlength="40" />
+      <div class="addCarRow">
+        <button onclick="submitNewCar()" class="confirm" style="margin-top:0">Ajouter</button>
+        <button onclick="toggleAddCarForm()" class="cancel" style="margin-top:0">Annuler</button>
+      </div>
+    </div>
+    <button id="carSelectOk" class="modalBtn confirm" style="margin-top:14px" onclick="confirmCarChoice()" disabled>Continuer</button>
+  </div>
+</div>
+
+<!-- ── Confirm Location Modal ── -->
+<div id="modal" class="modal-backdrop">
+  <div id="modalContent" class="modal-box">
+    <p class="modalText">Confirmer que vous avez garé le Nissan ici ?</p>
     <button id="confirmYes" class="modalBtn confirm">Confirmer</button>
     <button id="confirmNo" class="modalBtn cancel">Annuler</button>
   </div>
 </div>
 
-<div id="userModal">
-  <div id="userModalContent">
-    <p class="modalText">Qui a garé la voiture ?</p>
+<!-- ── User Modal ── -->
+<div id="userModal" class="modal-backdrop">
+  <div id="userModalContent" class="modal-box">
+    <p class="modalText">Qui a garé le Nissan ?</p>
     <div id="userGrid" class="userGrid"></div>
     <button id="userCancel" class="modalBtn cancel">Annuler</button>
   </div>
@@ -119,46 +176,46 @@
 const API = "https://script.google.com/macros/s/AKfycbyVS1LOtTzAnd6P61WZrtauti6_IuNrKalGKwtqjy_BDKUHeWyFHaZ3uKQnch0p6H_WSA/exec";
 const USERS = ["Constance", "Christine", "Marie", "Clement", "Gregoire", "Laurent", "Bastien"];
 
-const whereBtn = document.getElementById("whereBtn");
-const parkBtn = document.getElementById("parkBtn");
-const historyBtn = document.getElementById("historyBtn");
-const historyPanelEl = document.getElementById("historyPanel");
-const historyListEl = document.getElementById("historyList");
-const infoEl = document.getElementById("info");
-const statusEl = document.getElementById("status");
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedCar = localStorage.getItem("lastSelectedCar") || null;
+let pendingCarChoice = null;
+let carList = [];
+let busy = false;
+let historyVisible = false;
+let historyItems = [];
+let lat = null, lon = null;
+let currentMarker = null;
+let historyMarkers = [];
+let selectedUser = localStorage.getItem("lastParkingUser") || "Gregoire";
 
+// ── Map ────────────────────────────────────────────────────────────────────
 let map = L.map("map", { zoomControl: false }).setView([48.8566, 2.3522], 13);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors"
 }).addTo(map);
 
-let currentMarker = null;
-let historyMarkers = [];
-let lat = null;
-let lon = null;
-let busy = false;
-let historyVisible = false;
-let historyItems = [];
-let selectedUser = localStorage.getItem("lastParkingUser") || "Gregoire";
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const whereBtn       = document.getElementById("whereBtn");
+const parkBtn        = document.getElementById("parkBtn");
+const historyBtn     = document.getElementById("historyBtn");
+const historyPanelEl = document.getElementById("historyPanel");
+const historyListEl  = document.getElementById("historyList");
+const infoEl         = document.getElementById("info");
+const statusEl       = document.getElementById("status");
+const vehicleNameEl  = document.getElementById("vehicleName");
+const vehicleLabelEl = document.getElementById("vehicleLabel");
 
+vehicleLabelEl.addEventListener("click", () => openCarModal());
+
+// ── Icons ──────────────────────────────────────────────────────────────────
 function currentIcon() {
-  return L.divIcon({
-    className: "",
-    html: '<div class="current-pin">N</div>',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
-  });
+  return L.divIcon({ className: "", html: '<div class="current-pin">N</div>', iconSize:[30,30], iconAnchor:[15,15] });
+}
+function historyIcon(n) {
+  return L.divIcon({ className: "", html: `<div class="history-pin">${n}</div>`, iconSize:[28,28], iconAnchor:[14,14] });
 }
 
-function historyIcon(num) {
-  return L.divIcon({
-    className: "",
-    html: `<div class="history-pin">${num}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14]
-  });
-}
-
+// ── Busy ───────────────────────────────────────────────────────────────────
 function setBusy(state, msg) {
   busy = state;
   whereBtn.disabled = state;
@@ -167,71 +224,177 @@ function setBusy(state, msg) {
   if (msg) statusEl.innerText = msg;
 }
 
+// ── Formatting ─────────────────────────────────────────────────────────────
 function formatDate(value) {
   if (!value) return "";
   const d = new Date(value);
   if (isNaN(d.getTime())) return value;
-  return d.toLocaleString("fr-FR", {
-    timeZone: "Europe/Paris",
-    dateStyle: "medium",
-    timeStyle: "short"
+  return d.toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "medium", timeStyle: "short" });
+}
+
+// ── Map helpers ────────────────────────────────────────────────────────────
+function clearHistoryMarkers() {
+  historyMarkers.forEach(m => map.removeLayer(m));
+  historyMarkers = [];
+}
+function updateCurrentMarker(newLat, newLon) {
+  lat = Number(newLat); lon = Number(newLon);
+  if (currentMarker) map.removeLayer(currentMarker);
+  currentMarker = L.marker([lat, lon], { icon: currentIcon() }).addTo(map);
+  currentMarker.bindPopup(selectedCar || "Position actuelle");
+}
+function fitMapToVisibleMarkers() {
+  const pts = [];
+  if (currentMarker) pts.push(currentMarker.getLatLng());
+  historyMarkers.forEach(m => pts.push(m.getLatLng()));
+  if (!pts.length) return;
+  if (pts.length === 1) { map.setView(pts[0], 16); return; }
+  map.fitBounds(L.latLngBounds(pts), { padding: [30,30] });
+}
+
+// ── Vehicle label ──────────────────────────────────────────────────────────
+function setVehicleLabel(name) {
+  selectedCar = name;
+  vehicleNameEl.textContent = name || "—";
+  document.title = "Où est le Nissan ?";
+}
+
+// ── Car Modal ──────────────────────────────────────────────────────────────
+function openCarModal() {
+  pendingCarChoice = selectedCar;
+  renderCarGrid();
+  document.getElementById("carModal").style.display = "flex";
+  document.getElementById("addCarForm").style.display = "none";
+  document.getElementById("newCarInput").value = "";
+  updateCarOkBtn();
+}
+
+function renderCarGrid() {
+  const grid = document.getElementById("carGrid");
+  grid.innerHTML = "";
+  if (!carList.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;color:#888;font-size:14px;text-align:center">Aucun véhicule encore. Ajoutez-en un ci-dessous.</div>';
+    return;
+  }
+  carList.forEach(car => {
+    const btn = document.createElement("button");
+    btn.className = "carChoice" + (car === pendingCarChoice ? " selected" : "");
+    btn.textContent = car;
+    btn.onclick = () => {
+      pendingCarChoice = car;
+      grid.querySelectorAll(".carChoice").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      updateCarOkBtn();
+    };
+    grid.appendChild(btn);
   });
 }
 
-function clearHistoryMarkers() {
-  historyMarkers.forEach((m) => map.removeLayer(m));
-  historyMarkers = [];
+function updateCarOkBtn() {
+  document.getElementById("carSelectOk").disabled = !pendingCarChoice;
 }
 
-function updateCurrentMarker(newLat, newLon) {
-  lat = Number(newLat);
-  lon = Number(newLon);
-  if (currentMarker) map.removeLayer(currentMarker);
-  currentMarker = L.marker([lat, lon], { icon: currentIcon() }).addTo(map);
-  currentMarker.bindPopup("Position actuelle");
+function toggleAddCarForm() {
+  const form = document.getElementById("addCarForm");
+  const visible = form.style.display === "block";
+  form.style.display = visible ? "none" : "block";
+  if (!visible) document.getElementById("newCarInput").focus();
 }
 
-function fitMapToVisibleMarkers() {
-  const points = [];
-  if (currentMarker) points.push(currentMarker.getLatLng());
-  historyMarkers.forEach((m) => points.push(m.getLatLng()));
-  if (!points.length) return;
-  if (points.length === 1) {
-    map.setView(points[0], 16);
-    return;
+async function submitNewCar() {
+  const input = document.getElementById("newCarInput");
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+
+  document.getElementById("carSelectOk").disabled = true;
+  statusEl.innerText = "Ajout du véhicule…";
+
+  try {
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "addCar", carName: name })
+    });
+    const data = await res.json();
+    if (data.success && data.cars) {
+      carList = data.cars;
+      pendingCarChoice = name;
+      input.value = "";
+      document.getElementById("addCarForm").style.display = "none";
+      renderCarGrid();
+      updateCarOkBtn();
+      statusEl.innerText = `Nissan « ${name} » ajouté.`;
+    } else {
+      alert("Erreur : " + (data.error || "inconnue"));
+    }
+  } catch(err) {
+    alert("Erreur réseau : " + err);
   }
-  map.fitBounds(L.latLngBounds(points), { padding: [30, 30] });
+  updateCarOkBtn();
 }
 
+function confirmCarChoice() {
+  if (!pendingCarChoice) return;
+  setVehicleLabel(pendingCarChoice);
+  localStorage.setItem("lastSelectedCar", pendingCarChoice);
+  document.getElementById("carModal").style.display = "none";
+  if (currentMarker) { map.removeLayer(currentMarker); currentMarker = null; }
+  clearHistoryMarkers();
+  lat = null; lon = null;
+  infoEl.innerText = "Chargement de la dernière position…";
+  if (historyVisible) {
+    historyVisible = false;
+    historyPanelEl.style.display = "none";
+    historyBtn.innerText = "5 derniers stationnements";
+  }
+  getLocation();
+}
+
+// ── Fetch car list then show picker ───────────────────────────────────────
+async function initCarPicker() {
+  try {
+    const res = await fetch(API + "?action=carlist&t=" + Date.now(), { cache: "no-store" });
+    const data = await res.json();
+    carList = data.cars || [];
+  } catch(err) {
+    carList = [];
+  }
+  if (selectedCar && carList.includes(selectedCar)) {
+    setVehicleLabel(selectedCar);
+    getLocation();
+  } else {
+    selectedCar = null;
+    openCarModal();
+  }
+}
+
+// ── Get location ───────────────────────────────────────────────────────────
 function getLocation() {
-  if (busy) return;
+  if (busy || !selectedCar) return;
   setBusy(true, "Chargement… Le service gratuit peut prendre un moment à se réveiller. Merci de patienter sans réappuyer.");
-  fetch(API + "?t=" + Date.now(), { method: "GET", cache: "no-store" })
-    .then((res) => res.json())
-    .then((data) => {
+  fetch(API + "?t=" + Date.now() + "&car=" + encodeURIComponent(selectedCar), { cache: "no-store" })
+    .then(r => r.json())
+    .then(data => {
       if (!data.latitude) {
-        infoEl.innerText = "Aucune position enregistrée.";
+        infoEl.innerText = "Aucune position enregistrée pour ce véhicule.";
         setBusy(false, "Aucune position enregistrée pour le moment.");
         return;
       }
       updateCurrentMarker(data.latitude, data.longitude);
-      if (!historyVisible) {
-        map.setView([lat, lon], 16);
-      } else {
-        fitMapToVisibleMarkers();
-      }
-      const updatedBy = data.updatedBy || "inconnu";
-      const updatedAt = formatDate(data.updatedAt);
-      infoEl.innerText = "Garée par " + updatedBy + (updatedAt ? "\nMise à jour : " + updatedAt : "");
+      if (!historyVisible) map.setView([lat, lon], 16);
+      else fitMapToVisibleMarkers();
+      infoEl.innerText = "Garée par " + (data.updatedBy || "inconnu") +
+        (data.updatedAt ? "\nMise à jour : " + formatDate(data.updatedAt) : "");
       setBusy(false, "Position chargée.");
     })
-    .catch((err) => {
+    .catch(err => {
       console.error("GET error:", err);
       infoEl.innerText = "Erreur de chargement.";
       setBusy(false, "Impossible de charger la position.");
     });
 }
 
+// ── History ────────────────────────────────────────────────────────────────
 function renderHistory(items) {
   historyItems = items || [];
   clearHistoryMarkers();
@@ -239,43 +402,36 @@ function renderHistory(items) {
     historyListEl.innerHTML = '<div class="historyItem">Aucun historique disponible.</div>';
     return;
   }
-  historyListEl.innerHTML = historyItems.map((item, index) => {
-    const mapsUrl = `https://www.google.com/maps?q=${Number(item.latitude)},${Number(item.longitude)}`;
-    return `
-      <div class="historyItem">
-        <a class="historyLink" href="${mapsUrl}" target="_blank" rel="noopener noreferrer">(${index + 1}) : Ouvrir dans Google Maps</a>
-      </div>
-    `;
+  historyListEl.innerHTML = historyItems.map((item, i) => {
+    const url = `https://www.google.com/maps?q=${Number(item.latitude)},${Number(item.longitude)}`;
+    return `<div class="historyItem"><a class="historyLink" href="${url}" target="_blank" rel="noopener noreferrer">(${i+1}) : Ouvrir dans Google Maps</a></div>`;
   }).join("");
-  historyItems.forEach((item, index) => {
-    const marker = L.marker([Number(item.latitude), Number(item.longitude)], {
-      icon: historyIcon(index + 1)
-    }).addTo(map);
-    marker.bindPopup(`Historique ${index + 1}`);
-    historyMarkers.push(marker);
+  historyItems.forEach((item, i) => {
+    const m = L.marker([Number(item.latitude), Number(item.longitude)], { icon: historyIcon(i+1) }).addTo(map);
+    m.bindPopup(`Historique ${i+1}`);
+    historyMarkers.push(m);
   });
   fitMapToVisibleMarkers();
 }
 
 function loadHistory() {
-  if (busy) return;
-  setBusy(true, "Chargement de l’historique…");
+  if (busy || !selectedCar) return;
+  setBusy(true, "Chargement de l'historique…");
   historyListEl.innerHTML = "Chargement…";
   historyPanelEl.style.display = "block";
   historyVisible = true;
   historyBtn.innerText = "Masquer les 5 derniers";
-  fetch(API + "?history=5&t=" + Date.now(), { method: "GET", cache: "no-store" })
-    .then((res) => res.json())
-    .then((data) => {
+  fetch(API + "?history=5&t=" + Date.now() + "&car=" + encodeURIComponent(selectedCar), { cache: "no-store" })
+    .then(r => r.json())
+    .then(data => {
       renderHistory(data.items || []);
       setBusy(false, "Historique chargé.");
     })
-    .catch((err) => {
+    .catch(err => {
       console.error("HISTORY error:", err);
-      historyListEl.innerHTML = '<div class="historyItem">Impossible de charger l’historique.</div>';
-      historyItems = [];
-      clearHistoryMarkers();
-      setBusy(false, "Impossible de charger l’historique.");
+      historyListEl.innerHTML = '<div class="historyItem">Impossible de charger l\'historique.</div>';
+      historyItems = []; clearHistoryMarkers();
+      setBusy(false, "Impossible de charger l'historique.");
     });
 }
 
@@ -286,33 +442,28 @@ function toggleHistory() {
     historyPanelEl.style.display = "none";
     historyBtn.innerText = "5 derniers stationnements";
     clearHistoryMarkers();
-    if (lat !== null && lon !== null) map.setView([lat, lon], 16);
+    if (lat !== null) map.setView([lat, lon], 16);
     return;
   }
   loadHistory();
 }
 
+// ── Modals ─────────────────────────────────────────────────────────────────
 function showConfirmModal() {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const modal = document.getElementById("modal");
     modal.style.display = "flex";
-    document.getElementById("confirmYes").onclick = () => {
-      modal.style.display = "none";
-      resolve(true);
-    };
-    document.getElementById("confirmNo").onclick = () => {
-      modal.style.display = "none";
-      resolve(false);
-    };
+    document.getElementById("confirmYes").onclick = () => { modal.style.display = "none"; resolve(true); };
+    document.getElementById("confirmNo").onclick  = () => { modal.style.display = "none"; resolve(false); };
   });
 }
 
 function showUserModal() {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const modal = document.getElementById("userModal");
-    const grid = document.getElementById("userGrid");
+    const grid  = document.getElementById("userGrid");
     grid.innerHTML = "";
-    USERS.forEach((user) => {
+    USERS.forEach(user => {
       const btn = document.createElement("button");
       btn.className = "userChoice" + (user === selectedUser ? " selected" : "");
       btn.textContent = user;
@@ -324,68 +475,58 @@ function showUserModal() {
       };
       grid.appendChild(btn);
     });
-    document.getElementById("userCancel").onclick = () => {
-      modal.style.display = "none";
-      resolve(null);
-    };
+    document.getElementById("userCancel").onclick = () => { modal.style.display = "none"; resolve(null); };
     modal.style.display = "flex";
   });
 }
 
+// ── Park car ───────────────────────────────────────────────────────────────
 async function parkCar() {
   if (busy) return;
-  if (!navigator.geolocation) {
-    alert("La géolocalisation n'est pas disponible sur cet appareil.");
-    return;
-  }
+  if (!selectedCar) { openCarModal(); return; }
+  if (!navigator.geolocation) { alert("La géolocalisation n'est pas disponible sur cet appareil."); return; }
 
   const chosenUser = await showUserModal();
   if (!chosenUser) return;
 
   setBusy(true, "Récupération de votre position…");
-  navigator.geolocation.getCurrentPosition(async (pos) => {
+  navigator.geolocation.getCurrentPosition(async pos => {
     const confirmed = await showConfirmModal();
-    if (!confirmed) {
-      setBusy(false, "Enregistrement annulé.");
-      return;
-    }
+    if (!confirmed) { setBusy(false, "Enregistrement annulé."); return; }
     setBusy(true, "Enregistrement… Le service gratuit peut prendre un moment à répondre. Merci de patienter.");
     try {
-      const response = await fetch(API, {
+      const res = await fetch(API, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
-          latitude: pos.coords.latitude,
+          latitude:  pos.coords.latitude,
           longitude: pos.coords.longitude,
-          updatedBy: chosenUser
+          updatedBy: chosenUser,
+          carName:   selectedCar
         })
       });
-      const data = await response.json();
+      const data = await res.json();
       if (data.error || data.success === false || data.ok === false) {
         alert("Erreur lors de l'enregistrement : " + (data.error || "inconnue"));
-        setBusy(false, "Erreur lors de l'enregistrement.");
-        return;
+        setBusy(false, "Erreur lors de l'enregistrement."); return;
       }
       setBusy(false, "Position enregistrée. Chargement de la dernière position…");
       getLocation();
       if (historyVisible) setTimeout(loadHistory, 300);
-    } catch (err) {
+    } catch(err) {
       console.error("POST error:", err);
       alert("Erreur réseau.");
       setBusy(false, "Erreur réseau.");
     }
-  }, (err) => {
+  }, err => {
     console.error("GEO error:", err);
-    setBusy(false, "Impossible d’obtenir votre position.");
+    setBusy(false, "Impossible d'obtenir votre position.");
     alert("Impossible d'obtenir la géolocalisation.");
-  }, {
-    enableHighAccuracy: true,
-    timeout: 15000,
-    maximumAge: 0
-  });
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 
-getLocation();
+// ── Boot ───────────────────────────────────────────────────────────────────
+initCarPicker();
 </script>
 </body>
 </html>
