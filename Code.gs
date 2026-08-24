@@ -3,62 +3,61 @@ const CAR_LIST_SHEET = 'CarList';
 const HEADER = ['latitude', 'longitude', 'updatedBy', 'updatedAt', 'carName'];
 
 function doGet(e) {
-  const params = e && e.parameter ? e.parameter : {};
+  try {
+    const params = (e && e.parameter) ? e.parameter : {};
+    const action  = params.action  || '';
+    const carName = params.car     || null;
+    const history = params.history || null;
 
-  // Return car list
-  if (params.action === 'carlist') {
-    return jsonOutput_({ cars: getCarList_() });
+    // ── Return car list ──────────────────────────────────────────────────
+    if (action === 'carlist') {
+      return jsonOutput_({ cars: getCarList_() });
+    }
+
+    // ── History ──────────────────────────────────────────────────────────
+    if (history) {
+      const sheet = getSheet_();
+      const count = Math.min(parseInt(history) || 5, 50);
+      return jsonOutput_({ items: getHistory_(sheet, count, carName) });
+    }
+
+    // ── Latest position ──────────────────────────────────────────────────
+    const sheet = getSheet_();
+    const row   = getLatestRow_(sheet, carName);
+    if (!row) return jsonOutput_({});
+
+    return jsonOutput_({
+      latitude:  row[0],
+      longitude: row[1],
+      updatedBy: row[2],
+      updatedAt: row[3],
+      carName:   row[4] || ''
+    });
+
+  } catch(err) {
+    return jsonOutput_({ error: String(err) });
   }
-
-  const sheet = getSheet_();
-  const lastRow = sheet.getLastRow();
-
-  // History request
-  if (params.history) {
-    const count = Math.min(parseInt(params.history) || 5, 50);
-    const carName = params.car || null;
-    const items = getHistory_(sheet, count, carName);
-    return jsonOutput_({ items });
-  }
-
-  // Latest position
-  if (lastRow < 2) {
-    return jsonOutput_({});
-  }
-
-  const carName = params.car || null;
-  const row = getLatestRow_(sheet, carName);
-  if (!row) return jsonOutput_({});
-
-  return jsonOutput_({
-    latitude:  row[0],
-    longitude: row[1],
-    updatedBy: row[2],
-    updatedAt: row[3],
-    carName:   row[4] || ''
-  });
 }
 
 function doPost(e) {
   try {
-    const raw = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
+    const raw  = (e && e.postData && e.postData.contents) ? e.postData.contents : '{}';
     const body = JSON.parse(raw);
 
-    // Add new car to CarList
+    // ── Add new vehicle ──────────────────────────────────────────────────
     if (body.action === 'addCar') {
-      if (!body.carName || !body.carName.trim()) {
-        return jsonOutput_({ success: false, error: 'Missing carName' });
-      }
-      addCarToList_(body.carName.trim());
+      const name = (body.carName || '').toString().trim();
+      if (!name) return jsonOutput_({ success: false, error: 'Missing carName' });
+      addCarToList_(name);
       return jsonOutput_({ success: true, cars: getCarList_() });
     }
 
-    // Save location
-    const sheet = getSheet_();
+    // ── Save location ────────────────────────────────────────────────────
     if (body.latitude === undefined || body.longitude === undefined || !body.updatedBy) {
       return jsonOutput_({ success: false, error: 'Missing latitude, longitude, or updatedBy' });
     }
 
+    const sheet = getSheet_();
     sheet.appendRow([
       Number(body.latitude),
       Number(body.longitude),
@@ -68,21 +67,19 @@ function doPost(e) {
     ]);
 
     return jsonOutput_({ success: true });
-  } catch (err) {
+
+  } catch(err) {
     return jsonOutput_({ success: false, error: String(err) });
   }
 }
 
-// ── helpers ────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function getLatestRow_(sheet, carName) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return null;
-  if (!carName) {
-    const vals = sheet.getRange(lastRow, 1, 1, 5).getValues()[0];
-    return vals;
-  }
   const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+  if (!carName) return data[data.length - 1];
   for (let i = data.length - 1; i >= 0; i--) {
     if (String(data[i][4]).toLowerCase() === carName.toLowerCase()) return data[i];
   }
@@ -106,11 +103,12 @@ function getHistory_(sheet, count, carName) {
 }
 
 function getCarList_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(CAR_LIST_SHEET);
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet   = ss.getSheetByName(CAR_LIST_SHEET);
   if (!sheet) {
     sheet = ss.insertSheet(CAR_LIST_SHEET);
     sheet.getRange(1, 1).setValue('carName');
+    return [];
   }
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return [];
@@ -118,13 +116,12 @@ function getCarList_() {
 }
 
 function addCarToList_(carName) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(CAR_LIST_SHEET);
   if (!sheet) {
     sheet = ss.insertSheet(CAR_LIST_SHEET);
     sheet.getRange(1, 1).setValue('carName');
   }
-  // Avoid duplicates (case-insensitive)
   const existing = getCarList_().map(c => c.toLowerCase());
   if (!existing.includes(carName.toLowerCase())) {
     sheet.appendRow([carName]);
@@ -132,11 +129,9 @@ function addCarToList_(carName) {
 }
 
 function getSheet_() {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = spreadsheet.getSheetByName(SHEET_NAME);
-  if (!sheet) {
-    sheet = spreadsheet.insertSheet(SHEET_NAME);
-  }
+  const ss  = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, HEADER.length).setValues([HEADER]);
   }
