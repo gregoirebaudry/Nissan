@@ -142,9 +142,9 @@
     <p class="modal-title">Quel véhicule ?</p>
     <p class="modal-sub">Choisissez le véhicule à localiser ou garer.</p>
     <div id="carGrid" class="carGrid"></div>
-    <button class="addCarBtn" onclick="toggleAddCarForm()">＋ Ajouter un véhicule</button>
+    <button class="addCarBtn" onclick="toggleAddCarForm()">＋ Ajouter un Nissan</button>
     <div id="addCarForm">
-      <input id="newCarInput" type="text" placeholder="Nom du véhicule" maxlength="40" />
+      <input id="newCarInput" type="text" placeholder="Nom du Nissan" maxlength="40" />
       <div class="addCarRow">
         <button onclick="submitNewCar()" class="confirm" style="margin-top:0">Ajouter</button>
         <button onclick="toggleAddCarForm()" class="cancel" style="margin-top:0">Annuler</button>
@@ -299,8 +299,7 @@ async function submitNewCar() {
   const name = input.value.trim();
   if (!name) { input.focus(); return; }
 
-  document.getElementById("carSelectOk").disabled = true;
-  statusEl.innerText = "Ajout du véhicule…";
+  statusEl.innerText = "Ajout du Nissan…";
 
   try {
     const res = await fetch(API, {
@@ -313,10 +312,8 @@ async function submitNewCar() {
       carList = data.cars;
       pendingCarChoice = name;
       input.value = "";
-      document.getElementById("addCarForm").style.display = "none";
-      renderCarGrid();
-      updateCarOkBtn();
       statusEl.innerText = `Nissan « ${name} » ajouté.`;
+      confirmCarChoice();
     } else {
       alert("Erreur : " + (data.error || "inconnue"));
     }
