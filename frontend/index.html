@@ -112,11 +112,11 @@
 <body>
 <div class="container">
   <h1>🚗 Où est le Nissan ?</h1>
-  <div id="vehicleLabel">Nissan : <span id="vehicleName">—</span> &nbsp;·&nbsp; <span style="color:#007aff">changer</span></div>
+  <div id="vehicleLabel">Nissan : <span id="vehicleName" style="color:#007aff;font-weight:600;cursor:pointer">—</span></div>
 
   <div class="card">
     <div class="topButtons">
-      <button id="whereBtn" onclick="getLocation()">📍 Où est-il ?</button>
+      <button id="whereBtn" onclick="getLocation()">📍 Où est-elle ?</button>
       <button id="historyBtn" onclick="toggleHistory()">5 derniers stationnements</button>
     </div>
     <button id="parkBtn" onclick="parkCar()">🚗 J'ai garé le Nissan</button>
@@ -150,7 +150,6 @@
         <button onclick="toggleAddCarForm()" class="cancel" style="margin-top:0">Annuler</button>
       </div>
     </div>
-    <button id="carSelectOk" class="modalBtn confirm" style="margin-top:14px" onclick="confirmCarChoice()" disabled>Continuer</button>
   </div>
 </div>
 
@@ -205,7 +204,7 @@ const statusEl       = document.getElementById("status");
 const vehicleNameEl  = document.getElementById("vehicleName");
 const vehicleLabelEl = document.getElementById("vehicleLabel");
 
-vehicleLabelEl.addEventListener("click", () => openCarModal());
+document.getElementById("vehicleName").addEventListener("click", () => openCarModal());
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 function currentIcon() {
@@ -266,7 +265,6 @@ function openCarModal() {
   document.getElementById("carModal").style.display = "flex";
   document.getElementById("addCarForm").style.display = "none";
   document.getElementById("newCarInput").value = "";
-  updateCarOkBtn();
 }
 
 function renderCarGrid() {
@@ -282,17 +280,12 @@ function renderCarGrid() {
     btn.textContent = car;
     btn.onclick = () => {
       pendingCarChoice = car;
-      grid.querySelectorAll(".carChoice").forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      updateCarOkBtn();
+      confirmCarChoice();
     };
     grid.appendChild(btn);
   });
 }
 
-function updateCarOkBtn() {
-  document.getElementById("carSelectOk").disabled = !pendingCarChoice;
-}
 
 function toggleAddCarForm() {
   const form = document.getElementById("addCarForm");
@@ -330,7 +323,6 @@ async function submitNewCar() {
   } catch(err) {
     alert("Erreur réseau : " + err);
   }
-  updateCarOkBtn();
 }
 
 function confirmCarChoice() {
